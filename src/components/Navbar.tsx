@@ -8,10 +8,12 @@ const Navbar = () => {
     const {user} = useUser();
     const {openSignIn} = useClerk()
     const navigate = useNavigate()
+
   return (
     <div className='fixed top-0 left-0 right-0 z-50 w-full flex items-center justify-between px-6 md:px-10 lg:px-16 py-5'>
+
         <Link to={'/'} className='flex-1'>
-        <img src={assets.logo} alt="" className='w-28 h-auto' />
+        <img src={assets.logo} alt="" className='w-36 h-auto' />
         </Link>
         
         <div className={`max-md:absolute max-md:top-0 max-md:left-0 max-md:font-medium max-md:text-lg z-50 flex flex-col md:flex-row items-center max-md:justify-center gap-8 md:px-8 py-3 max-md:h-screen md:rounded-full backdrop-blur bg-black/70 md:bg-white/10 md:border border-gray-300/20 overflow-hidden transition-[width] duration-300 ${isOpen ? 'max-md:w-50':'max-md:w-0'}`}>
@@ -19,15 +21,15 @@ const Navbar = () => {
             <XIcon className='md:hidden absolute top-6 right-6 w-6 h-6 cursor-pointer' onClick={()=>setIsOpen(!isOpen)}/>
     
 
-            <Link to={"/"} className='relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-white after:transition-all after:duration-300 hover:after:w-full' onClick={()=>(scrollTo(0,0),setIsOpen(false))} >Home</Link>
+            <Link to={"/"} className='relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-white after:transition-all after:duration-300 hover:after:w-full' onClick={()=>{scrollTo(0,0);setIsOpen(false)}} >Home</Link>
 
-            <Link to={"/Movies"} className='relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-red-400 after:transition-all after:duration-300 hover:after:w-full' onClick={()=>(scrollTo(0,0),setIsOpen(false))}>Movies</Link>
+            <Link to={"/Movies"} className='relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-red-400 after:transition-all after:duration-300 hover:after:w-full' onClick={()=>{scrollTo(0,0);setIsOpen(false)}}>Movies</Link>
 
-            <Link to={"/"} className='relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-blue-400 after:transition-all after:duration-300 hover:after:w-full' onClick={()=>(scrollTo(0,0),setIsOpen(false))}>Theatres</Link>
+            <Link to={"/"} className='relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-blue-400 after:transition-all after:duration-300 hover:after:w-full' onClick={()=>{scrollTo(0,0);setIsOpen(false)}}>Theatres</Link>
 
-            <Link to={"/"} className='relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-green-500 after:transition-all after:duration-300 hover:after:w-full' onClick={()=>(scrollTo(0,0),setIsOpen(false))}>Releases</Link>
+            <Link to={"/"} className='relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-green-500 after:transition-all after:duration-300 hover:after:w-full' onClick={()=>{scrollTo(0,0);setIsOpen(false)}}>Releases</Link>
 
-            <Link to={"/favorite"} className='relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-pink-300 after:transition-all after:duration-300 hover:after:w-full' onClick={()=>(scrollTo(0,0),setIsOpen(false))}>Favorites</Link>
+            <Link to={"/favorite"} className='relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-pink-300 after:transition-all after:duration-300 hover:after:w-full' onClick={()=>{scrollTo(0,0);setIsOpen(false)}}>Favorites</Link>
         </div>
 
 
