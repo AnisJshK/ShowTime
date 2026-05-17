@@ -1,6 +1,7 @@
 import { StarIcon } from 'lucide-react'
 import React, { createContext, useState, useContext, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import timeFormat from '../lib/timeFormat'
 
 // ── Helper ────────────────────────────────────────────────────
 const cx = (...classes: (string | undefined | false)[]): string =>
@@ -15,7 +16,7 @@ interface Movie {
   _id: string
   backdrop_path: string
   title: string
-  release_data: string
+  release_date: string
   genres: Genre[]
   runtime: number
   vote_average: number
@@ -138,9 +139,9 @@ const MovieCard = ({ movie }: MovieCardProps) => {
 
             <CardItem translateZ={30} className="w-full">
               <p className="text-sm text-gray-400 mt-2">
-                {new Date(movie.release_data).getFullYear()} •{' '}
-                {movie.genres.slice(0, 2).map((g) => g.name).join(' | ')} •{' '}
-                {movie.runtime}
+                {new Date(movie.release_date).getFullYear()} •{' '}
+                {movie.genres.slice(0, 2).map((g) => g.name).join(' | ')} • {' '} • {timeFormat({minutes:movie.runtime})}
+                 {movie.runtime}
               </p>
             </CardItem>
 
