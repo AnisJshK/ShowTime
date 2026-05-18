@@ -228,7 +228,7 @@ export const dummyDashboardData = {
             "_id": "68352363e96d99513e4221a4",
             "movie": dummyShowsData[0],
             "showDateTime": "2025-06-30T02:30:00.000Z",
-            "showPrice": 59,
+            "showPrice": 159,
             "occupiedSeats": {
                 "A1": "user_2xO4XPCgWWwWq9EHuQxc5UWqIok",
                 "B1": "user_2xO4XPCgWWwWq9EHuQxc5UWqIok",
@@ -239,21 +239,21 @@ export const dummyDashboardData = {
             "_id": "6835238fe96d99513e4221a8",
             "movie": dummyShowsData[1],
             "showDateTime": "2025-06-30T15:30:00.000Z",
-            "showPrice": 81,
+            "showPrice": 181,
             "occupiedSeats": {},
         },
         {
             "_id": "6835238fe96d99513e4221a9",
             "movie": dummyShowsData[2],
             "showDateTime": "2025-06-30T03:30:00.000Z",
-            "showPrice": 81,
+            "showPrice": 181,
             "occupiedSeats": {},
         },
         {
             "_id": "6835238fe96d99513e4221aa",
             "movie": dummyShowsData[3],
             "showDateTime": "2025-07-15T16:30:00.000Z",
-            "showPrice": 81,
+            "showPrice": 181,
             "occupiedSeats": {
                 "A1": "user_2xO4XPCgWWwWq9EHuQxc5UWqIok",
                 "A2": "user_2xO4XPCgWWwWq9EHuQxc5UWqIok",
@@ -265,7 +265,7 @@ export const dummyDashboardData = {
             "_id": "683682072b5989c29fc6dc0d",
             "movie": dummyShowsData[4],
             "showDateTime": "2025-06-05T15:30:00.000Z",
-            "showPrice": 49,
+            "showPrice": 149,
             "occupiedSeats": {
                 "A1": "user_2xO4XPCgWWwWq9EHuQxc5UWqIok",
                 "A2": "user_2xO4XPCgWWwWq9EHuQxc5UWqIok",
@@ -280,7 +280,7 @@ export const dummyDashboardData = {
             "_id": "68380044686d454f2116b39a",
             "movie": dummyShowsData[5],
             "showDateTime": "2025-06-20T16:00:00.000Z",
-            "showPrice": 79,
+            "showPrice": 179,
             "occupiedSeats": {
                 "A1": "user_2xl7eCSUHddibk5lRxfOtw9RMwX",
                 "A2": "user_2xl7eCSUHddibk5lRxfOtw9RMwX"

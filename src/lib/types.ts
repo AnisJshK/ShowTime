@@ -58,12 +58,12 @@ export interface DateTimeData {
 }
 
 export interface ActiveShow {
-  _id: string;
+  _id?: string;
   movie: Movie;
   showDateTime: string;
   showPrice: number;
   occupiedSeats: {
-    [seatId: string]: string; // Key: Seat number (e.g., "A1"), Value: User ID string
+    [seatId: string]: string|undefined; // Key: Seat number (e.g., "A1"), Value: User ID string
   };
   __v?: number; // Optional field found in MongoDB documents
 }
