@@ -1,5 +1,18 @@
+# Environment variables
+client/.env
 server/.env
+
+# Node modules
+client/node_modules
 server/node_modules
 
-client/.env
-client/node_modules
+# Build folders
+client/dist
+server/dist
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
