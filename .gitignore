@@ -1,14 +1,11 @@
-# Environment variables
-client/.env
-server/.env
+# Dependencies
+**/node_modules
 
-# Node modules
-client/node_modules
-server/node_modules
+# Environment files
+**/.env
 
 # Build folders
-client/dist
-server/dist
+**/dist
 
 # Logs
 *.log
