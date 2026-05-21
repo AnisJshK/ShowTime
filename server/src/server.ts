@@ -20,7 +20,7 @@ app.use(clerkMiddleware())
 app.get("/",async(req,res)=>{
     res.send('Server is Live!')
 })
-app.use('/api/inngest',serve({client:inngest,functions}))
+app.use('/api/inngest',serve({client:inngest,functions:[]}))
 
  
 app.listen(PORT,()=>{
