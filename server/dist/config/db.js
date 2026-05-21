@@ -1,4 +1,4 @@
-import mongoose, { mongo } from 'mongoose';
+import mongoose from 'mongoose';
 const connectDB = async () => {
     try {
         mongoose.connection.on('connected', () => console.log('DataBase connected'));
@@ -9,4 +9,3 @@ const connectDB = async () => {
     }
 };
 export default connectDB;
-//# sourceMappingURL=db.js.map
