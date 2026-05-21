@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon --exec tsx src/server.ts",
+    "dev": "nodemon --exec \"tsc && node dist/server.js\" --watch src --ext ts",
     "build": "tsc",
     "start": "node dist/server.js"
   },
@@ -13,6 +13,7 @@
   "type": "module",
   "description": "",
   "dependencies": {
+    "@clerk/express": "^2.1.19",
     "axios": "^1.16.1",
     "cloudinary": "^2.10.0",
     "cors": "^2.8.6",
