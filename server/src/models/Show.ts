@@ -5,7 +5,7 @@ const ShowSchema = new Schema({
     showDateTime:{type:Date,required:true},
     showPrice:{type:Number,required:true},
     occupiedSeats:{type:Object,default:{}}
-},{minimize:false})
+},{minimize:false}) 
 
 const Show = mongoose.model("Show",ShowSchema)
 export default Show;
