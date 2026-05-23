@@ -2,6 +2,7 @@ import { StarIcon } from 'lucide-react'
 import React, { createContext, useState, useContext, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import timeFormat from '../lib/timeFormat'
+import { useAppContext } from '../context/AppContext'
 
 // ── Helper ────────────────────────────────────────────────────
 const cx = (...classes: (string | undefined | false)[]): string =>
@@ -87,6 +88,7 @@ interface MovieCardProps {
 
 const MovieCard = ({ movie }: MovieCardProps) => {
   const navigate = useNavigate()
+  const {image_base_url} = useAppContext()
   const containerRef = useRef<HTMLDivElement>(null)
   const [isMouseEntered, setIsMouseEntered] = useState<boolean>(false)
 
@@ -127,7 +129,7 @@ const MovieCard = ({ movie }: MovieCardProps) => {
             <CardItem translateZ={60} className="w-full">
               <img
                 onClick={goToMovie}
-                src={movie.backdrop_path}
+                src={image_base_url + movie?.backdrop_path}
                 alt={movie.title}
                 className="rounded-lg h-52 w-full object-cover object-right-bottom cursor-pointer"
               />
@@ -141,7 +143,7 @@ const MovieCard = ({ movie }: MovieCardProps) => {
               <p className="text-sm text-gray-400 mt-2">
                 {new Date(movie.release_date).getFullYear()} •{' '}
                 {movie.genres.slice(0, 2).map((g) => g.name).join(' | ')} • {' '} • {timeFormat({minutes:movie.runtime})}
-                 {movie.runtime}
+                 {/* {movie.runtime} */}
               </p>
             </CardItem>
 

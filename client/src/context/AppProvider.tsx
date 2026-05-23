@@ -2,83 +2,108 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { AppContext } from "./AppContext";
 import axios from "axios";
 import { useAuth, useUser } from "@clerk/react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
 axios.defaults.baseURL = import.meta.env.VITE_BASE_URL;
 
-export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [shows, setShows] = useState([]);
-  const [favoriteMovies, setFavoriteMovies] = useState([]);
+// Simple TypeScript interfaces to prevent implicit 'never[]' types
+interface Movie {
+  _id: string;
+  backdrop_path: string;
+  title: string;
+  [key: string]: any; 
+}
 
-  const image_base_url = import.meta.env.VITE_TMDB_IMAGE_BASE_URL
+interface Show {
+  _id: string;
+  movie: Movie;
+  [key: string]: any;
+}
+
+export const AppProvider = ({ children }: { children: ReactNode }) => {
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [shows, setShows] = useState<Show[]>([]);
+  const [favoriteMovies, setFavoriteMovies] = useState<Movie[]>([]);
+
+  const image_base_url = import.meta.env.VITE_TMDB_IMAGE_BASE_URL;
 
   const { user } = useUser();
   const { getToken } = useAuth();
-  const location = useLocation();
   const navigate = useNavigate();
 
+  // 1. Fetch shows once on mount
+ useEffect(() => {
+  const fetchShows = async () => {
+    try {
+      console.log("Fetching shows from:", axios.defaults.baseURL + "/api/show/all");
+      const { data } = await axios.get("/api/show/all");
+      
+      console.log("Backend API Response raw data:", data);
 
-  //function to fetch all the shows from backend
-  useEffect(() => {
-    const fetchShows = async () => {
-      try {
-        const { data } = await axios.get("/api/show/all");
-        if (data.success) {
-          setShows(data.shows);
-        } else {
-          toast.error(data.message);
-        }
-      } catch (error: any) {
-        console.error(error);
+      if (data.success) {
+        // Double check your backend key name! Is it data.shows or data.movies or data.data?
+        setShows(data.shows || []); 
+        console.log("Successfully set shows state:", data.shows);
+      } else {
+        toast.error(data.message);
       }
-    };
+    } catch (error) {
+      console.error("Axios network fetch failed:", error);
+    }
+  };
 
-    fetchShows();
-  }, []);
+  fetchShows();
+}, []);
 
-  //function to fetch favorite movies from backend
+  // 2. Fetch favorite movies (useCallback only needs getToken)
   const fetchFavoriteMovies = useCallback(async () => {
-    const { data } = await axios.get("/api/user/favorites", {
-      headers: {
-        Authorization: `Bearer ${await getToken()}`,
-      },
-    });
-    if (data.success) {
-      setFavoriteMovies(data.movies);
-    } else {
-      toast.error(data.message);
+    try {
+      const token = await getToken();
+      const { data } = await axios.get("/api/user/favorites", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (data.success) {
+        setFavoriteMovies(data.movies);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.error("Error fetching favorites:", error);
     }
   }, [getToken]);
 
-  //function to verify if the user is admin or not
+  // 3. Keep verification pure. Do NOT mix route-guarding logic here!
   const fetchIsAdmin = useCallback(async () => {
     try {
+      const token = await getToken();
       const { data } = await axios.get("/api/admin/is-Admin", {
-        headers: { Authorization: `Bearer ${await getToken()}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       setIsAdmin(data.isAdmin);
-
-      if (!data.isAdmin && location.pathname.startsWith("/admin")) {
-        navigate("/");
-        toast.error("You are not authorized to access admin Dashboard");
-      }
-    } catch (error: any) {
-      console.error(error);
+      return data.isAdmin; // return value so components can use it directly if needed
+    } catch (error) {
+      console.error("Error verifying admin status:", error);
+      setIsAdmin(false);
+      return false;
     }
-  }, [getToken, location.pathname, navigate]);
+  }, [getToken]);
 
-
+  // 4. Synchronize user status securely without causing dependency loops
   useEffect(() => {
-    if(!user) return;
-    async function init() {
-        await fetchIsAdmin();
-        await fetchFavoriteMovies();
+    if (!user) {
+      setIsAdmin(false);
+      setFavoriteMovies([]);
+      return;
     }
-    init()
-  }, [user,fetchIsAdmin,fetchFavoriteMovies]);
 
+    const initUserData = async () => {
+      await fetchIsAdmin();
+      await fetchFavoriteMovies();
+    };
+
+    initUserData();
+  }, [user, fetchIsAdmin, fetchFavoriteMovies]);
 
   const value = {
     axios,
@@ -92,5 +117,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     fetchFavoriteMovies,
     image_base_url,
   };
+
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
