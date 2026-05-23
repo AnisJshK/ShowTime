@@ -12,6 +12,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [shows, setShows] = useState([]);
   const [favoriteMovies, setFavoriteMovies] = useState([]);
 
+  const image_base_url = import.meta.env.VITE_TMDB_IMAGE_BASE_URL
+
   const { user } = useUser();
   const { getToken } = useAuth();
   const location = useLocation();
@@ -88,6 +90,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     shows,
     favoriteMovies,
     fetchFavoriteMovies,
+    image_base_url,
   };
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };

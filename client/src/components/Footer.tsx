@@ -8,7 +8,7 @@ const Footer = () => {
                 <div className="md:max-w-96">
                     <img alt="" className="h-25 w-auto" src={assets.logo} />
                     <p className="mt-6 text-sm">
-                        The content and the images used on this site are copyright protected and copyrights vests with the respective owners. The usage of theese is intended to promote the works and no endorsement of the artist shall be implied. Unauthorized use is prohibited and punishable by law
+                        The content and the images used on this site are copyright protected and copyrights vests with the respective owners. The usage of these is intended to promote the works and no endorsement of the artist shall be implied. Unauthorized use is prohibited and punishable by law
                     </p>
                     <div className="flex items-center gap-2 mt-4">
                         <img src={assets.googlePlay} alt="google play" className="h-9 w-auto border border-white rounded" />
