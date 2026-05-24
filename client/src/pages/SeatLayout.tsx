@@ -65,10 +65,10 @@ const SeatLayout = () => {
                 className={`h-8 w-8 rounded border text-[10px] font-medium cursor-pointer transition
                   ${
                     isOccupied
-                    ? "bg-gray-200 border-gray-300 text-gray-400 opacity-50 cursor-not-allowed"
-                    :isSelected
-                    ? "bg-primary border-primary text-white cursor-pointer"
-                    : "border-primary/60 hover:bg-primary/20 cursor-pointer"
+                      ? "bg-gray-200 border-gray-300 text-gray-400 opacity-50 cursor-not-allowed"
+                      : isSelected
+                        ? "bg-primary border-primary text-white cursor-pointer"
+                        : "border-primary/60 hover:bg-primary/20 cursor-pointer"
                   }`}
               >
                 {seatId}
@@ -85,8 +85,7 @@ const SeatLayout = () => {
       if (!user) {
         return toast.error("Please login to proceed");
       }
-      if (!selectedTime || !selectedSeats.length){
-
+      if (!selectedTime || !selectedSeats.length) {
         return toast.error("Please select a time and seats");
       }
       const { data } = await axios.post(
@@ -101,12 +100,48 @@ const SeatLayout = () => {
           },
         },
       );
-      if(data.success){
-        toast.success(data.message)
-        navigate('/my-booking')
-      }else{
-        toast.error(data.message)
+      if (!data.success) {
+        return toast.error(data.message);
       }
+
+      const options = {
+        key: data.key,
+        amount: data.order.amount,
+        currency: "INR",
+        name: show?.movie.title,
+        description: `Seats: ${selectedSeats.join(", ")}`,
+        order_id: data.order.id,
+        handler: async (response: any) => {
+          try {
+            // Step 3: Verify payment
+            const { data: verifyData } = await axios.post(
+              "/api/booking/verify-payment",
+              { ...response, bookingId: data.bookingId },
+              { headers: { Authorization: `Bearer ${await getToken()}` } },
+            );
+
+            if (verifyData.success) {
+              toast.success("Booking confirmed!");
+              navigate("/my-bookings");
+            } else {
+              toast.error("Payment verification failed.");
+            }
+          } catch {
+            toast.error("Something went wrong during verification.");
+          }
+        },
+        prefill: {
+          name: user?.fullName || "",
+          email: user?.primaryEmailAddress?.emailAddress || "",
+        },
+        theme: { color: "#6366f1" },
+        modal: {
+          ondismiss: () => toast("Payment cancelled.", { icon: "ℹ️" }),
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
     } catch (error: any) {
       toast.error(error.message);
     }
