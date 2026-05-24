@@ -7,6 +7,7 @@ import { ArrowRightIcon, ClockIcon } from "lucide-react";
 import isoTimeFormat from "../lib/isoTimeFormat";
 import BlurCircle from "../components/BlurCircle";
 import toast from "react-hot-toast";
+import { useAppContext } from "../context/AppContext";
 
 interface ShowState {
   movie: Movie;
@@ -26,8 +27,11 @@ const SeatLayout = () => {
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [selectedTime, setSelectedTime] = useState<ShowTimeSlot | null>(null);
   const [show, setShow] = useState<ShowState | null>(null);
+  const [occupiedSeats, setOccupiedSeats] = useState([]);
 
   const navigate = useNavigate();
+
+  const { axios, getToken, user } = useAppContext();
 
   const handleSeatClick = (seatId: string) => {
     if (!selectedTime) {
@@ -35,6 +39,9 @@ const SeatLayout = () => {
     }
     if (!selectedSeats.includes(seatId) && selectedSeats.length > 4) {
       return toast("You can only select 5 seats");
+    }
+    if (occupiedSeats.includes(seatId)) {
+      return toast("This seat is already booked");
     }
     setSelectedSeats((prev) =>
       prev.includes(seatId)
@@ -49,14 +56,19 @@ const SeatLayout = () => {
         <div className="flex items-center gap-1.5">
           {Array.from({ length: count }, (_, i) => {
             const seatId = `${row}${i + 1}`;
+            const isOccupied = occupiedSeats.includes(seatId);
+            const isSelected = selectedSeats.includes(seatId);
             return (
               <button
                 key={seatId}
                 onClick={() => handleSeatClick(seatId)}
                 className={`h-8 w-8 rounded border text-[10px] font-medium cursor-pointer transition
-                  ${selectedSeats.includes(seatId)
-                    ? "bg-primary border-primary text-white"
-                    : "border-primary/60 hover:bg-primary/20"
+                  ${
+                    isOccupied
+                    ? "bg-gray-200 border-gray-300 text-gray-400 opacity-50 cursor-not-allowed"
+                    :isSelected
+                    ? "bg-primary border-primary text-white cursor-pointer"
+                    : "border-primary/60 hover:bg-primary/20 cursor-pointer"
                   }`}
               >
                 {seatId}
@@ -68,11 +80,67 @@ const SeatLayout = () => {
     );
   };
 
+  const bookTickets = async () => {
+    try {
+      if (!user) {
+        return toast.error("Please login to proceed");
+      }
+      if (!selectedTime || !selectedSeats.length){
+
+        return toast.error("Please select a time and seats");
+      }
+      const { data } = await axios.post(
+        "/api/booking/create",
+        {
+          showId: selectedTime.showId,
+          selectedSeats,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${await getToken()}`,
+          },
+        },
+      );
+      if(data.success){
+        toast.success(data.message)
+        navigate('/my-booking')
+      }else{
+        toast.error(data.message)
+      }
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  useEffect(() => {
+    const getOccupiedSeats = async () => {
+      try {
+        const { data } = await axios.get(
+          `/api/booking/seats/${selectedTime?.showId}`,
+        );
+        if (data.success) {
+          setOccupiedSeats(data.occupiedSeats);
+        } else {
+          toast.error(data.message);
+        }
+      } catch (error: any) {
+        console.log(error);
+      }
+    };
+    if (selectedTime) {
+      getOccupiedSeats();
+    }
+  }, [selectedTime]);
+
   useEffect(() => {
     const getShow = async () => {
-      const show = dummyShowsData.find((show) => show._id === id);
-      if (show) {
-        setShow({ movie: show, dateTime: dummyDateTimeData });
+      try {
+        const { data } = await axios.get(`/api/show/${id}`);
+        if (data.success) {
+          setShow(data);
+        }
+      } catch (error: any) {
+        console.log(eror);
       }
     };
     getShow();
@@ -81,7 +149,6 @@ const SeatLayout = () => {
   return show ? (
     // ✅ Fixed px-116 (invalid) → proper responsive padding; added gap between sidebar & main
     <div className="flex flex-col md:flex-row gap-6 px-4 sm:px-8 lg:px-24 xl:px-40 py-20 md:pt-32">
-
       {/* ✅ Sidebar: full-width on mobile, fixed-width sticky on desktop */}
       <div className="w-full md:w-60 shrink-0 bg-primary/10 border border-primary/20 rounded-2xl py-8 h-max md:sticky md:top-28">
         <p className="text-lg font-semibold px-6 mb-2">Available Timings</p>
@@ -91,9 +158,10 @@ const SeatLayout = () => {
               key={item.time}
               onClick={() => setSelectedTime(item)}
               className={`flex items-center gap-2 px-6 py-2.5 cursor-pointer transition
-                ${selectedTime?.time === item.time
-                  ? "bg-primary text-white rounded-r-full w-max"
-                  : "hover:bg-primary/20 rounded-r-full w-max"
+                ${
+                  selectedTime?.time === item.time
+                    ? "bg-primary text-white rounded-r-full w-max"
+                    : "hover:bg-primary/20 rounded-r-full w-max"
                 }`}
             >
               <ClockIcon className="w-4 h-4 shrink-0" />
@@ -109,7 +177,11 @@ const SeatLayout = () => {
         <BlurCircle bottom="0" right="0" />
 
         <h1 className="text-2xl font-semibold mb-4">Select your seat</h1>
-        <img src={assets.screenImage} alt="screen" className="w-full max-w-lg" />
+        <img
+          src={assets.screenImage}
+          alt="screen"
+          className="w-full max-w-lg"
+        />
         <p className="text-gray-400 text-sm mb-8">SCREEN SIDE</p>
 
         {/* 
@@ -118,7 +190,6 @@ const SeatLayout = () => {
         */}
         <div className="w-full overflow-x-auto pb-2">
           <div className="flex flex-col items-center text-xs text-gray-300 min-w-max mx-auto">
-
             {/* A/B rows — centered single block, matching screenshot */}
             <div className="flex flex-col items-center mb-6">
               {groupRows[0].map((row) => renderSeats(row))}
@@ -127,17 +198,14 @@ const SeatLayout = () => {
             {/* C–J rows — 2-column grid with aisle gap, exactly as in screenshot */}
             <div className="grid grid-cols-2 gap-10">
               {groupRows.slice(1).map((group, idx) => (
-                <div key={idx}>
-                  {group.map((row) => renderSeats(row))}
-                </div>
+                <div key={idx}>{group.map((row) => renderSeats(row))}</div>
               ))}
             </div>
-
           </div>
         </div>
 
         <button
-          onClick={() => navigate("/my-bookings")}
+          onClick={bookTickets}
           className="flex items-center gap-1 mt-16 px-10 py-3 text-sm bg-primary hover:bg-primary-dull transition rounded-full font-medium cursor-pointer active:scale-95"
         >
           Proceed to CheckOut

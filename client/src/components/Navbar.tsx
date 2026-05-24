@@ -3,11 +3,13 @@ import { Link, useNavigate } from 'react-router-dom'
 import { assets } from '../assets/assets'
 import {MenuIcon, SearchIcon, Ticket, TicketPlus, XIcon} from 'lucide-react'
 import { useClerk, UserButton, useUser } from '@clerk/react'
+import { useAppContext } from '../context/AppContext'
 const Navbar = () => {
     const [isOpen,setIsOpen] = useState(false);
     const {user} = useUser();
     const {openSignIn} = useClerk()
     const navigate = useNavigate()
+    const {favoriteMovies} = useAppContext();
 
   return (
     <div className='fixed top-0 left-0 right-0 z-50 w-full flex items-center justify-between px-6 md:px-10 lg:px-16 py-5'>
@@ -29,7 +31,7 @@ const Navbar = () => {
 
             <Link to={"/"} className='relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-green-500 after:transition-all after:duration-300 hover:after:w-full' onClick={()=>{scrollTo(0,0);setIsOpen(false)}}>Releases</Link>
 
-            <Link to={"/favorite"} className='relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-pink-300 after:transition-all after:duration-300 hover:after:w-full' onClick={()=>{scrollTo(0,0);setIsOpen(false)}}>Favorites</Link>
+            {favoriteMovies.length>0 && <Link to={"/favorite"} className='relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-pink-300 after:transition-all after:duration-300 hover:after:w-full' onClick={()=>{scrollTo(0,0);setIsOpen(false)}}>Favorites</Link>}
         </div>
 
 

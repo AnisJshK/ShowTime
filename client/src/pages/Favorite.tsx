@@ -13,8 +13,8 @@ const Favorite = () => {
 
       <h1 className="text-lg font-medium my-4">Your Favorite Movies</h1>
       <div className="flex flex-wrap items-center justify-center gap-8 mt-8">
-        {favoriteMovies.filter(([id,movieData])=>movieData).map(([id,movieData])=>(
-          <MovieCard movie={movieData} key={id}/>
+        {favoriteMovies.map((movie)=>(
+          <MovieCard movie={movie} key={movie._id}/>
         ))}
       </div>
     </div>
