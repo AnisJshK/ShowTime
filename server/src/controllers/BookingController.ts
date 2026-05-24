@@ -11,16 +11,24 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET!,
 });
 
+/**
+ * Checks if all selectedSeats are free for a given show.
+ * Blocks seats that are either "paid" OR "pending" so two users
+ * can't simultaneously claim the same seat.
+ */
 const checkSeatsAvailability = async (
   showId: string | mongoose.Types.ObjectId,
   selectedSeats: string[]
-) => {
+): Promise<boolean> => {
   try {
-    const bookings = await Booking.find({ show: showId, paymentStatus: "paid" });
+    const bookings = await Booking.find({
+      show: new mongoose.Types.ObjectId(showId.toString()),
+      paymentStatus: { $in: ["paid", "pending"] },
+    });
     const occupiedSeats = bookings.flatMap((b) => b.bookedSeats);
     return !selectedSeats.some((seat) => occupiedSeats.includes(seat));
   } catch (error: any) {
-    console.log(error.message);
+    console.error("checkSeatsAvailability error:", error.message);
     return false;
   }
 };
@@ -34,11 +42,24 @@ export const createBooking = async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: "Not Authenticated" });
 
     if (!showId || !selectedSeats?.length)
-      return res.status(400).json({ success: false, message: "ShowId and selectedSeats are required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "showId and selectedSeats are required" });
+
+    // Delete any abandoned pending bookings by THIS user for THIS show
+    // before checking availability, so the user can re-attempt without
+    // their own old pending entry blocking them.
+    await Booking.deleteMany({
+      user: userId,
+      show: new mongoose.Types.ObjectId(showId.toString()),
+      paymentStatus: "pending",
+    });
 
     const isAvailable = await checkSeatsAvailability(showId, selectedSeats);
     if (!isAvailable)
-      return res.status(409).json({ success: false, message: "Selected seats are not available." });
+      return res
+        .status(409)
+        .json({ success: false, message: "Selected seats are no longer available." });
 
     const showData = await Show.findById(showId).populate("movie");
     if (!showData)
@@ -54,12 +75,22 @@ export const createBooking = async (req: Request, res: Response) => {
       paymentStatus: "pending",
     });
 
-    const razorpayOrder = await razorpay.orders.create({
-      amount: totalAmount * 100,
-      currency: "INR",
-      receipt: booking._id.toString(),
-      notes: { bookingId: booking._id.toString(), showId, userId },
-    });
+    let razorpayOrder;
+    try {
+      razorpayOrder = await razorpay.orders.create({
+        amount: totalAmount * 100, // convert to paise
+        currency: "INR",
+        receipt: booking._id.toString(),
+        notes: { bookingId: booking._id.toString(), showId, userId },
+      });
+    } catch (razorpayError: any) {
+      // Roll back the booking if Razorpay order creation fails
+      await Booking.findByIdAndDelete(booking._id);
+      console.error("Razorpay order creation error:", razorpayError.message);
+      return res
+        .status(500)
+        .json({ success: false, message: "Payment initialization failed." });
+    }
 
     booking.razorpayOrderId = razorpayOrder.id;
     await booking.save();
@@ -71,7 +102,7 @@ export const createBooking = async (req: Request, res: Response) => {
       key: process.env.RAZORPAY_KEY_ID,
     });
   } catch (error: any) {
-    console.error(error);
+    console.error("createBooking error:", error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -82,16 +113,23 @@ export const verifyPayment = async (req: Request, res: Response) => {
     if (!userId)
       return res.status(401).json({ success: false, message: "Not Authenticated" });
 
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, bookingId } = req.body;
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      bookingId,
+    } = req.body;
 
     const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
-      .update(razorpay_order_id + "|" + razorpay_payment_id)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest("hex");
 
     if (expectedSignature !== razorpay_signature) {
       await Booking.findByIdAndUpdate(bookingId, { paymentStatus: "failed" });
-      return res.status(400).json({ success: false, message: "Payment verification failed." });
+      return res
+        .status(400)
+        .json({ success: false, message: "Payment verification failed." });
     }
 
     const booking = await Booking.findById(bookingId);
@@ -104,21 +142,57 @@ export const verifyPayment = async (req: Request, res: Response) => {
 
     return res.json({ success: true, message: "Booking confirmed!" });
   } catch (error: any) {
-    console.error(error);
+    console.error("verifyPayment error:", error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
 
+/**
+ * Returns seats that are either paid OR pending so the frontend
+ * can gray them out accurately in real time.
+ */
 export const getOccupiedSeats = async (req: Request, res: Response) => {
   try {
     const { showId } = req.params;
-
-    const bookings = await Booking.find({ show: showId, paymentStatus: "paid" });
+    if (!showId || typeof showId !== 'string') {
+      return res.status(400).json({ success: false, message: "Invalid or missing showId parameter" });
+    }
+    const bookings = await Booking.find({
+      show: new mongoose.Types.ObjectId(showId),
+      paymentStatus: { $in: ["paid", "pending"] },
+    });
     const occupiedSeats = bookings.flatMap((b) => b.bookedSeats);
 
     return res.json({ success: true, occupiedSeats });
   } catch (error: any) {
-    console.error(error);
+    console.error("getOccupiedSeats error:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const cancelBooking = async (req: Request, res: Response) => {
+  try {
+    const { userId } = getAuth(req);
+    const { bookingId } = req.params;
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking)
+      return res.status(404).json({ success: false, message: "Booking not found" });
+
+    // user field is a String (Clerk userId) — direct string comparison is correct
+    if (booking.user !== userId)
+      return res.status(403).json({ success: false, message: "Unauthorized" });
+
+    if (booking.paymentStatus !== "pending")
+      return res
+        .status(400)
+        .json({ success: false, message: "Only pending bookings can be cancelled" });
+
+    await Booking.findByIdAndDelete(bookingId);
+
+    return res.json({ success: true, message: "Booking cancelled." });
+  } catch (error: any) {
+    console.error("cancelBooking error:", error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
