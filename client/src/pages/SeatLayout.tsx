@@ -175,7 +175,7 @@ const SeatLayout = () => {
           setShow(data);
         }
       } catch (error: any) {
-        console.log(eror);
+        console.log(error);
       }
     };
     getShow();
