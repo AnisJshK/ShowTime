@@ -104,6 +104,8 @@ export const createBooking = async (req: Request, res: Response) => {
         bookingId:booking._id.toString(),
       }
     })
+    
+    
 
     return res.json({
       success: true,
@@ -111,6 +113,7 @@ export const createBooking = async (req: Request, res: Response) => {
       bookingId: booking._id,
       key: process.env.RAZORPAY_KEY_ID,
     });
+    
   } catch (error: any) {
     console.error("createBooking error:", error);
     return res.status(500).json({ success: false, message: error.message });
@@ -150,7 +153,16 @@ export const verifyPayment = async (req: Request, res: Response) => {
     booking.paymentId = razorpay_payment_id;
     await booking.save();
 
+    await inngest.send({
+      name:"app/show.booked",
+      data:{
+        bookingId,
+      }
+    })
+
     return res.json({ success: true, message: "Booking confirmed!" });
+    
+    
   } catch (error: any) {
     console.error("verifyPayment error:", error);
     return res.status(500).json({ success: false, message: error.message });
