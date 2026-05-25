@@ -5,6 +5,7 @@ import { getAuth } from "@clerk/express";
 import Booking from "../models/Booking.js";
 import Razorpay from "razorpay";
 import crypto from "crypto";
+import { inngest } from "../inngest/index.js";
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID!,
@@ -94,6 +95,15 @@ export const createBooking = async (req: Request, res: Response) => {
 
     booking.razorpayOrderId = razorpayOrder.id;
     await booking.save();
+
+    //Run inngest scheduer function to check payment status after 10 minutes
+
+    await inngest.send({
+      name:"app/checkpayment",
+      data:{
+        bookingId:booking._id.toString(),
+      }
+    })
 
     return res.json({
       success: true,

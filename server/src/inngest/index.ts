@@ -1,5 +1,7 @@
 import { Inngest } from "inngest";
 import Usermodel from "../models/user.js";
+import Booking from "../models/Booking.js";
+import Show from "../models/Show.js";
 
 export const inngest = new Inngest({ id: "movie-ticket-booking" });
 
@@ -59,5 +61,35 @@ const syncUserUpdation = inngest.createFunction(
   }
 );
 
+const releaseSeatsAndDeleteBooking = inngest.createFunction(
+  { id: "release-seats-delete-booking" ,triggers:{event:"app/checkpayment"}},
 
-export const functions : ReturnType<typeof inngest.createFunction>[]= [syncUserCreation,syncUserDeletion,syncUserUpdation];
+  async ({ event, step }) => {
+    const tenMinutesLater = new Date(Date.now() + 10 * 60 * 1000);
+    await step.sleepUntil("wait-for-10-minutes", tenMinutesLater);
+
+    await step.run("check-payment-status", async () => {
+      const bookingId = event.data.bookingId;
+      const booking = await Booking.findById(bookingId);
+
+      // ✅ null check before accessing booking properties
+      if (!booking) return;
+
+      if (booking.paymentStatus === "failed" || booking.paymentStatus === "pending") {
+        const show = await Show.findById(booking.show);
+
+        // ✅ null check before mutating show
+        if (!show) return;
+
+        booking.bookedSeats.forEach((seat) => {
+          delete show.occupiedSeats[seat]; // ✅ was "delete.show" — dot was in wrong place
+        });
+
+        show.markModified("occupiedSeats"); // ✅ removed ?. since we already null-checked
+        await show.save();
+        await Booking.findByIdAndDelete(booking._id);
+      }
+    });
+  }
+);
+export const functions : ReturnType<typeof inngest.createFunction>[]= [syncUserCreation,syncUserDeletion,syncUserUpdation,releaseSeatsAndDeleteBooking];
