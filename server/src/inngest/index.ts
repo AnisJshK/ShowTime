@@ -130,11 +130,11 @@ const sendBookingConfirmationEmail = inngest.createFunction(
   <h2>Hi ${booking.user.name},</h2>
   <p>Your booking for <strong style="color: #F84565;">"${booking.show.movie.title}"</strong> is confirmed.</p>
   <p>
-    <strong>Date:</strong> ${new Date(booking.show.showDateTime).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata' })}<br />
-    <strong>Time:</strong> ${new Date(booking.show.showDateTime).toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata' })}
+    <strong>Date:</strong> ${new Date(booking.show.showDateTime).toLocaleDateString("en-US", { timeZone: "Asia/Kolkata" })}<br />
+    <strong>Time:</strong> ${new Date(booking.show.showDateTime).toLocaleTimeString("en-US", { timeZone: "Asia/Kolkata" })}
   </p>
   <p>Enjoy the show! 🍿</p>
-  <p>Thanks for booking with us!<br />- QuickShow Team</p>
+  <p>Thanks for booking with us!<br />- ShowTime Team</p>
 </div>
 `;
 
@@ -143,7 +143,7 @@ const sendBookingConfirmationEmail = inngest.createFunction(
       subject: `Payment Confirmation: "${booking.show.movie.title}" booked!`,
       body: emailHtml,
     });
-  }
+  },
 );
 
 //Inngest function to send reminders
@@ -179,7 +179,8 @@ const sendShowReminders = inngest.createFunction(
           try {
             const user = await clerkClient.users.getUser(booking.user);
             const email = user.emailAddresses[0]?.emailAddress;
-            const name = `${user.firstName || ""} ${user.lastName || ""}`.trim();
+            const name =
+              `${user.firstName || ""} ${user.lastName || ""}`.trim();
 
             if (email) {
               tasks.push({
@@ -204,24 +205,61 @@ const sendShowReminders = inngest.createFunction(
 
     let sent = 0;
     for (const task of reminderTasks) {
-      await step.run(`send-reminder-${task.userEmail}-${task.showTime}`, async () => {
-        await sendEmail({
-          to: task.userEmail,
-          subject: `Reminder: ${task.movieTitle} starts in ~8 hours!`,
-          body: `
+      await step.run(
+        `send-reminder-${task.userEmail}-${task.showTime}`,
+        async () => {
+          await sendEmail({
+            to: task.userEmail,
+            subject: `Reminder: ${task.movieTitle} starts in ~8 hours!`,
+            body: `
             <h2>Hi ${task.userName},</h2>
             <p>Your movie <strong>${task.movieTitle}</strong> starts at
             <strong>${new Date(task.showTime).toLocaleString()}</strong>.</p>
             <p>Your seats: <strong>${task.bookedSeats.join(", ")}</strong></p>
             <p>Enjoy the show!</p>
           `,
-        });
-        sent++;
-      });
+          });
+          sent++;
+        },
+      );
     }
 
     return { sent, message: `${sent} reminder(s) sent.` };
-  }
+  },
+);
+
+//Inngest function to send notification when a new show is added
+const sendNewShowNotifications = inngest.createFunction(
+  {
+    id: "send-new-show-notification",
+    triggers: {
+      event: "app/show.added",
+    },
+  },
+  async ({ event }) => {
+    const { movieTitle, movieId } = event.data;
+    const users = await Usermodel.find({});
+    for (const user of users) {
+      const userEmail = user.email;
+      const userName = user.name;
+
+      const subject = `🎬 New Show Added: ${movieTitle}`;
+      const body = `<div style="font-family: Arial, sans-serif; padding: 20px;">
+         <h2>Hi ${userName},</h2>
+      <p>We've just added a new show to our library:</p>
+      <h3 style="color: #F84565;">"${movieTitle}"</h3>
+        <p>Visit our website</p>
+      <br/>
+        <p>Thanks,<br/>ShowTime Team</p>
+      </div>`;
+      await sendEmail({
+        to: userEmail,
+        subject,
+        body,
+      });
+    }
+    return {message:"Notifictions sent."}
+  },
 );
 
 export const functions: ReturnType<typeof inngest.createFunction>[] = [
@@ -230,5 +268,6 @@ export const functions: ReturnType<typeof inngest.createFunction>[] = [
   syncUserUpdation,
   releaseSeatsAndDeleteBooking,
   sendBookingConfirmationEmail,
-  sendShowReminders
+  sendShowReminders,
+  sendNewShowNotifications
 ];
