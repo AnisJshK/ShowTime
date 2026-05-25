@@ -39,7 +39,7 @@ const Navbar = () => {
             <SearchIcon className='max-md:hidden w-6 h-6 cursor-pointer'/>
             {
                 !user ? (
-                     <button onClick={()=>openSignIn} className='px-4 py-1 sm:px-7 sm:py-2 bg-primary hover:bg-primary-dull transition rounded-full font-medium cursor-pointer'>Login</button>
+                     <button onClick={()=>openSignIn()} className='px-4 py-1 sm:px-7 sm:py-2 bg-primary hover:bg-primary-dull transition rounded-full font-medium cursor-pointer'>Login</button>
                 ) : (
                     <UserButton>
                         <UserButton.MenuItems>
