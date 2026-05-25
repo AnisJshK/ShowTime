@@ -1,20 +1,21 @@
-import axios from "axios";
+import axios, { type AxiosStatic } from "axios";
 import { createContext, useContext } from "react";
-import { useAuth, useUser } from "@clerk/react";
-import { useNavigate } from "react-router-dom";
-import type { Movie,ActiveShow as Show } from "../lib/types";
+import type { UserResource } from "@clerk/types";
+import type { GetToken } from "@clerk/types";
+import type { NavigateFunction } from "react-router-dom";
+import type { Movie, ActiveShow } from "../lib/types";
 
 interface AppContextType {
-  axios: typeof axios;
-  fetchIsAdmin: () => Promise<boolean>;
-  user: ReturnType<typeof useUser>["user"];
-  getToken: ReturnType<typeof useAuth>["getToken"];
-  navigate: ReturnType<typeof useNavigate>;
+  axios: AxiosStatic;
+  fetchIsAdmin: () => Promise<any>;
+  user: UserResource | null | undefined;
+  getToken: GetToken;
+  navigate: NavigateFunction;
   isAdmin: boolean;
-  shows: Show[];
+  shows: ActiveShow[];
   favoriteMovies: Movie[];
   fetchFavoriteMovies: () => Promise<void>;
-  image_base_url: string;
+  image_base_url: any;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
