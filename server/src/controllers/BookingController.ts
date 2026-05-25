@@ -7,6 +7,13 @@ import Razorpay from "razorpay";
 import crypto from "crypto";
 import { inngest } from "../inngest/index.js";
 
+
+// ✅ Fail fast — catches missing env vars before any request is made
+if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+  throw new Error("RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set in .env");
+}
+
+
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID!,
   key_secret: process.env.RAZORPAY_KEY_SECRET!,
@@ -22,10 +29,18 @@ const checkSeatsAvailability = async (
   selectedSeats: string[]
 ): Promise<boolean> => {
   try {
+    // 1. Strictly validate the ID string before casting to avoid thread hangs
+    const cleanId = showId.toString();
+    if (!mongoose.Types.ObjectId.isValid(cleanId)) {
+      console.error(`checkSeatsAvailability: Invalid ObjectId string received: "${cleanId}"`);
+      return false; 
+    }
+
     const bookings = await Booking.find({
-      show: new mongoose.Types.ObjectId(showId.toString()),
+      show: new mongoose.Types.ObjectId(cleanId),
       paymentStatus: { $in: ["paid", "pending"] },
-    });
+    }).lean(); // .lean() optimizes performance and keeps things lightweight
+
     const occupiedSeats = bookings.flatMap((b) => b.bookedSeats);
     return !selectedSeats.some((seat) => occupiedSeats.includes(seat));
   } catch (error: any) {
@@ -33,7 +48,6 @@ const checkSeatsAvailability = async (
     return false;
   }
 };
-
 export const createBooking = async (req: Request, res: Response) => {
   try {
     const { userId } = getAuth(req);
@@ -43,24 +57,21 @@ export const createBooking = async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: "Not Authenticated" });
 
     if (!showId || !selectedSeats?.length)
-      return res
-        .status(400)
-        .json({ success: false, message: "showId and selectedSeats are required" });
+      return res.status(400).json({ success: false, message: "showId and selectedSeats are required" });
 
-    // Delete any abandoned pending bookings by THIS user for THIS show
-    // before checking availability, so the user can re-attempt without
-    // their own old pending entry blocking them.
+    // ✅ Validate ObjectId before any DB call — invalid id throws and hangs without this
+    if (!mongoose.Types.ObjectId.isValid(showId))
+      return res.status(400).json({ success: false, message: "Invalid showId" });
+
     await Booking.deleteMany({
       user: userId,
-      show: new mongoose.Types.ObjectId(showId.toString()),
+      show: new mongoose.Types.ObjectId(showId),
       paymentStatus: "pending",
     });
 
     const isAvailable = await checkSeatsAvailability(showId, selectedSeats);
     if (!isAvailable)
-      return res
-        .status(409)
-        .json({ success: false, message: "Selected seats are no longer available." });
+      return res.status(409).json({ success: false, message: "Selected seats are no longer available." });
 
     const showData = await Show.findById(showId).populate("movie");
     if (!showData)
@@ -79,33 +90,31 @@ export const createBooking = async (req: Request, res: Response) => {
     let razorpayOrder;
     try {
       razorpayOrder = await razorpay.orders.create({
-        amount: totalAmount * 100, // convert to paise
+        amount: totalAmount * 100,
         currency: "INR",
         receipt: booking._id.toString(),
         notes: { bookingId: booking._id.toString(), showId, userId },
       });
     } catch (razorpayError: any) {
-      // Roll back the booking if Razorpay order creation fails
       await Booking.findByIdAndDelete(booking._id);
       console.error("Razorpay order creation error:", razorpayError.message);
-      return res
-        .status(500)
-        .json({ success: false, message: "Payment initialization failed." });
+      return res.status(500).json({ success: false, message: "Payment initialization failed." });
     }
 
     booking.razorpayOrderId = razorpayOrder.id;
     await booking.save();
 
-    //Run inngest scheduer function to check payment status after 10 minutes
-
-    await inngest.send({
-      name:"app/checkpayment",
+    // ✅ Uncomment inngest after fixing the hang
+   await inngest.send({
+  name: "app/checkpayment",
+  data: { bookingId: booking._id.toString() },
+}).catch(err => console.error("Inngest event dispatch failed:", err));
+await inngest.send({
+      name:"app/show.booked",
       data:{
         bookingId:booking._id.toString(),
       }
     })
-    
-    
 
     return res.json({
       success: true,
@@ -113,7 +122,7 @@ export const createBooking = async (req: Request, res: Response) => {
       bookingId: booking._id,
       key: process.env.RAZORPAY_KEY_ID,
     });
-    
+
   } catch (error: any) {
     console.error("createBooking error:", error);
     return res.status(500).json({ success: false, message: error.message });
@@ -153,12 +162,7 @@ export const verifyPayment = async (req: Request, res: Response) => {
     booking.paymentId = razorpay_payment_id;
     await booking.save();
 
-    await inngest.send({
-      name:"app/show.booked",
-      data:{
-        bookingId,
-      }
-    })
+    
 
     return res.json({ success: true, message: "Booking confirmed!" });
     

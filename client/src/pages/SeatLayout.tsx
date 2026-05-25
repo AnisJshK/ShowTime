@@ -34,17 +34,26 @@ const SeatLayout = () => {
   const { axios, getToken, user } = useAppContext();
   
   const loadRazorpayScript = (): Promise<boolean> => {
-    return new Promise((resolve) => {
-      if ((window as any).Razorpay) return resolve(true);
-      
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.async = true;
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
-  };
+  return new Promise((resolve) => {
+    // 1. If Razorpay is already mounted to window, don't append a new script
+    if ((window as any).Razorpay) return resolve(true);
+    
+    // 2. Look through the document to see if a script tag is already tracking it
+    const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+    if (existingScript) {
+      existingScript.onload = () => resolve(true);
+      existingScript.onerror = () => resolve(false);
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
   const handleSeatClick = (seatId: string) => {
     if (!selectedTime) return toast("Please select a time slot first");
@@ -101,52 +110,81 @@ const SeatLayout = () => {
     }
   };
 
-  const bookTickets = async () => {
+ const bookTickets = async () => {
     if (!user) return toast.error("Please login to proceed");
     if (!selectedTime) return toast.error("Please select a time slot");
     if (!selectedSeats.length) return toast.error("Please select at least one seat");
 
     setIsBooking(true);
+    let createdBookingId: string | null = null;
+
     try {
+      console.log("1. Starting booking...");
+
       const isScriptLoaded = await loadRazorpayScript();
-      if(!isScriptLoaded){
+      console.log("2. Script loaded:", isScriptLoaded);
+
+      if (!isScriptLoaded) {
         toast.error("Razorpay SDK failed to load");
         setIsBooking(false);
         return;
       }
+
       const { data } = await axios.post(
         "/api/booking/create",
         { showId: selectedTime.showId, selectedSeats },
         { headers: { Authorization: `Bearer ${await getToken()}` } }
       );
 
-      if (!data.success) return toast.error(data.message);
-      if (!data.order || !data.key)
-        return toast.error("Could not initialize payment. Please try again.");
+      console.log("3. API response:", data);
 
+      if (!data.success) {
+        toast.error(data.message);
+        setIsBooking(false);
+        return;
+      }
+
+      if (!data.order || !data.key) {
+        toast.error("Could not initialize payment. Please try again.");
+        setIsBooking(false);
+        return;
+      }
+
+      // Track bookingId locally so we can cancel it if the user closes the modal
+      createdBookingId = data.bookingId;
+
+      console.log("4. Configuring Razorpay options...");
       const options = {
-        key: data.key,
+        key: data.key, // Uses key sent back securely from backend response
         amount: data.order.amount,
-        currency: "INR",
-        name: show?.movie.title,
-        description: `Seats: ${selectedSeats.join(", ")}`,
-        order_id: data.order.id,
+        currency: data.order.currency || "INR",
+        name: "Cinema Booking",
+        description: `Tickets for ${show?.movie?.title || "Movie Booking"}`,
+        order_id: data.order.id, // Razorpay Order ID generated from backend
         handler: async (response: any) => {
           try {
-            const { data: verifyData } = await axios.post(
+            const verifyRes = await axios.post(
               "/api/booking/verify-payment",
-              { ...response, bookingId: data.bookingId },
+              {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                bookingId: data.bookingId,
+              },
               { headers: { Authorization: `Bearer ${await getToken()}` } }
             );
 
-            if (verifyData.success) {
-              toast.success("Booking confirmed!");
-              navigate("/my-bookings");
+            if (verifyRes.data.success) {
+              toast.success("Payment successful!");
+              navigate("/my-bookings"); // Redirect user safely to their dashboard
             } else {
               toast.error("Payment verification failed.");
             }
-          } catch {
-            toast.error("Something went wrong during verification.");
+          } catch (error: any) {
+            console.error(error);
+            toast.error("Something went wrong verifying the payment.");
+          } finally {
+            setIsBooking(false);
           }
         },
         prefill: {
@@ -155,23 +193,24 @@ const SeatLayout = () => {
         },
         theme: { color: "#6366f1" },
         modal: {
-          ondismiss: async () => {
+          ondismiss: () => {
             toast("Payment cancelled.", { icon: "ℹ️" });
-            await cancelBooking(data.bookingId);
-            // Refresh occupied seats so the cancelled pending booking
-            // is no longer shown as occupied
-            await refreshOccupiedSeats(selectedTime.showId);
+            setIsBooking(false);
+            if (createdBookingId) {
+              cancelBooking(createdBookingId); // Frees up the blocked seats in DB instantly
+            }
           },
         },
       };
 
+      console.log("5. Opening Razorpay...");
       const rzp = new (window as any).Razorpay(options);
       rzp.open();
+      console.log("6. Razorpay window active");
+
     } catch (error: any) {
-      const message =
-        error?.response?.data?.message || error.message || "Something went wrong";
-      toast.error(message);
-    } finally {
+      console.error("CAUGHT ERROR:", error);
+      toast.error(error?.response?.data?.message || error.message || "Something went wrong");
       setIsBooking(false);
     }
   };
@@ -188,7 +227,9 @@ const SeatLayout = () => {
   // Fetch occupied seats whenever the selected time slot changes
   useEffect(() => {
     if (!selectedTime) return;
-    refreshOccupiedSeats(selectedTime.showId);
+    (async()=>{
+      await refreshOccupiedSeats(selectedTime.showId);
+    })();
   }, [selectedTime]);
 
   // Fetch show data on mount
