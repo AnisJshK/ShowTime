@@ -1,4 +1,4 @@
-import { dummyShowsData } from "../assets/assets"
+
 import BlurCircle from "../components/BlurCircle"
 import MovieCard from "../components/MovieCard"
 import { useAppContext } from "../context/AppContext"

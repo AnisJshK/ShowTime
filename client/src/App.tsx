@@ -1,4 +1,3 @@
-import React from "react";
 import Navbar from "./components/Navbar";
 import { Route, Routes, useLocation } from "react-router-dom";
 import Home from "./pages/Home";
@@ -14,7 +13,6 @@ import Dashboard from "./pages/admin/Dashboard";
 import AddShows from "./pages/admin/AddShows";
 import ListShows from "./pages/admin/ListShows";
 import ListBookings from "./pages/admin/ListBookings";
-import { AppProvider } from "./context/AppProvider";
 import { useAppContext } from "./context/AppContext";
 import { SignIn } from "@clerk/react";
 import Loading from "./components/Loading";

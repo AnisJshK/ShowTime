@@ -14,7 +14,7 @@ interface DateSelectProps{
 const DateSelect = ({id,dateTime}:DateSelectProps) => {
     const navigate = useNavigate();
 
-    const [selected,setSelected] = useState(null);
+    const [selected,setSelected] = useState<string|null>(null);
     const onBookHandler = () =>{
         if(!selected){
             return toast('please select a date')

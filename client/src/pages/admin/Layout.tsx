@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import  { useEffect } from 'react'
 import AdminNavbar from '../../components/admin/AdminNavbar'
 import { Outlet } from 'react-router-dom'
 import AdminSidebar from '../../components/admin/AdminSidebar'

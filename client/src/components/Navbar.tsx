@@ -1,7 +1,7 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { assets } from '../assets/assets'
-import {MenuIcon, SearchIcon, Ticket, TicketPlus, XIcon} from 'lucide-react'
+import {MenuIcon, SearchIcon,  TicketPlus, XIcon} from 'lucide-react'
 import { useClerk, UserButton, useUser } from '@clerk/react'
 import { useAppContext } from '../context/AppContext'
 const Navbar = () => {
@@ -39,7 +39,7 @@ const Navbar = () => {
             <SearchIcon className='max-md:hidden w-6 h-6 cursor-pointer'/>
             {
                 !user ? (
-                     <button onClick={openSignIn} className='px-4 py-1 sm:px-7 sm:py-2 bg-primary hover:bg-primary-dull transition rounded-full font-medium cursor-pointer'>Login</button>
+                     <button onClick={()=>openSignIn} className='px-4 py-1 sm:px-7 sm:py-2 bg-primary hover:bg-primary-dull transition rounded-full font-medium cursor-pointer'>Login</button>
                 ) : (
                     <UserButton>
                         <UserButton.MenuItems>

@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { dummyShowsData } from "../../assets/assets";
-import type { ActiveShow, DashboardData } from "../../lib/types";
+import { useEffect, useState } from "react";
+import type { ActiveShow } from "../../lib/types";
 import Loading from "../../components/Loading";
 import Title from "../../components/admin/Title";
 import { dateFormat } from "../../lib/dateFormat";

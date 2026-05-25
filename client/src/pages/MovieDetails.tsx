@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from "react";
+
 import { useNavigate, useParams } from "react-router-dom";
-import { dummyDateTimeData, dummyShowsData } from "../assets/assets";
 import BlurCircle from "../components/BlurCircle";
 import { Heart, PlayCircleIcon, StarIcon } from "lucide-react";
 import type { Movie } from "../lib/types";
@@ -10,6 +9,7 @@ import MovieCard from "../components/MovieCard";
 import Loading from "../components/Loading";
 import { useAppContext } from "../context/AppContext";
 import toast from "react-hot-toast";
+import { useEffect, useState } from "react";
 
 interface ShowState {
   movie: Movie;

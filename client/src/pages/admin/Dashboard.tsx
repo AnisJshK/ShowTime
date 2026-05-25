@@ -5,8 +5,7 @@ import {
   StarIcon,
   UsersIcon,
 } from "lucide-react";
-import React, { useEffect, useState } from "react";
-import { dummyDashboardData } from "../../assets/assets";
+import  { useEffect, useState } from "react";
 import type { DashboardData } from "../../lib/types";
 import Loading from "../../components/Loading";
 import Title from "../../components/admin/Title";

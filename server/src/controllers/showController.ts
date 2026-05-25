@@ -2,6 +2,7 @@ import axios from "axios";
 import { Request, Response } from "express";
 import Movie from "../models/Movie.js";
 import Show from "../models/Show.js";
+import { inngest } from "../inngest/index.js";
 
 interface TimeInput {
   time: string[];
@@ -96,6 +97,15 @@ export const addShow = async (req: Request, res: Response) => {
     if (showsToCreate.length > 0) {
       await Show.insertMany(showsToCreate);
     }
+
+    //Trigger inngest event
+    await inngest.send({
+      name:"app/show.added",
+      data:{
+        movieTitle:movie.title
+      }
+    })
+
     res.json({
       success: true,
       message: "Show Added successfully. ",
