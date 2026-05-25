@@ -4,26 +4,15 @@ import axios from "axios";
 import { useAuth, useUser } from "@clerk/react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import type { Movie, ActiveShow } from "../lib/types";
 
 axios.defaults.baseURL = import.meta.env.VITE_BASE_URL;
 
 // Simple TypeScript interfaces to prevent implicit 'never[]' types
-interface Movie {
-  _id: string;
-  backdrop_path: string;
-  title: string;
-  [key: string]: any; 
-}
-
-interface Show {
-  _id: string;
-  movie: Movie;
-  [key: string]: any;
-}
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
-  const [shows, setShows] = useState<Show[]>([]);
+  const [shows, setShows] = useState<ActiveShow[]>([]);
   const [favoriteMovies, setFavoriteMovies] = useState<Movie[]>([]);
 
   const image_base_url = import.meta.env.VITE_TMDB_IMAGE_BASE_URL;
