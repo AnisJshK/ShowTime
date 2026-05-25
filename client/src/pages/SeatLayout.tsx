@@ -32,6 +32,19 @@ const SeatLayout = () => {
 
   const navigate = useNavigate();
   const { axios, getToken, user } = useAppContext();
+  
+  const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if ((window as any).Razorpay) return resolve(true);
+      
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
 
   const handleSeatClick = (seatId: string) => {
     if (!selectedTime) return toast("Please select a time slot first");
@@ -95,6 +108,12 @@ const SeatLayout = () => {
 
     setIsBooking(true);
     try {
+      const isScriptLoaded = await loadRazorpayScript();
+      if(!isScriptLoaded){
+        toast.error("Razorpay SDK failed to load");
+        setIsBooking(false);
+        return;
+      }
       const { data } = await axios.post(
         "/api/booking/create",
         { showId: selectedTime.showId, selectedSeats },

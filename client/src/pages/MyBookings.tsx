@@ -1,10 +1,21 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { dummyBookingData } from "../assets/assets";
 import Loading from "../components/Loading";
 import BlurCircle from "../components/BlurCircle";
 import timeFormat from "../lib/timeFormat";
 import { dateFormat } from "../lib/dateFormat";
 import { useAppContext } from "../context/AppContext";
+
+
+const loadRazorpayScript = ()=>{
+    return new Promise((resolve)=>{
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    })
+  }
 
 const MyBookings = () => {
   const currency = import.meta.env.VITE_CURRENCY;
@@ -13,9 +24,12 @@ const MyBookings = () => {
 
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const razorpayKeyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
 
-  useEffect(() => {
-    const getMyBookings = async () => {
+  
+
+  
+    const getMyBookings = useCallback(async () => {
       try {
         const { data } = await axios.get("/api/user/bookings", {
           headers: {
@@ -29,14 +43,68 @@ const MyBookings = () => {
         console.log(error)
       }
        setIsLoading(false)
-    };
-    if(user){
+    },[axios,getToken]);
 
-      getMyBookings();
+    useEffect(()=>{
+     if(!user)return;
+     (async()=>{
+      await getMyBookings()
+     })();
+    },[user,getMyBookings])
+
+  const handlePayment = async (booking: any) => {
+    const res = await loadRazorpayScript();
+
+    if (!res) {
+      alert("Razorpay SDK failed to load. Are you online?");
+      return;
     }
-  }, [user]);
 
-  
+    // Options configuration for Razorpay modal
+    const options = {
+      key: razorpayKeyId,
+      amount: booking.amount * 100, // Razorpay takes amount in paise/cents
+      currency: currency || "INR",
+      name: "Cinema Booking",
+      description: `Tickets for ${booking.show.movie.title}`,
+      order_id: booking.razorpayOrderId, // Generated previously when creating the booking
+      handler: async function (response: any) {
+        try {
+          // Send payment verification data to your backend
+          const { data } = await axios.post(
+            "/api/user/verify-payment",
+            {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              bookingId: booking._id
+            },
+            { headers: { Authorization: `Bearer ${await getToken()}` } }
+          );
+
+          if (data.success) {
+            alert("Payment successful!");
+            getMyBookings(); // Refresh UI list to show "Paid" status
+          } else {
+            alert("Payment verification failed.");
+          }
+        } catch (error: any) {
+          console.error(error);
+          alert("Something went wrong verifying the payment.");
+        }
+      },
+      prefill: {
+        name: user?.fullName || "",
+        email: user?.primaryEmailAddress?.emailAddress || "",
+      },
+      theme: {
+        color: "#3B82F6", // Customize to match your theme primary color
+      },
+    };
+
+    const paymentObject = new (window as any).Razorpay(options);
+    paymentObject.open();
+  };
 
   return !isLoading ? (
     <div className="relative px-6 md:px-16 lg:px-40 pt-30 md:pt-40 min-h-[80vh">
@@ -72,9 +140,13 @@ const MyBookings = () => {
                 {currency}
                 {item.amount}
               </p>
-              {!item.isPaid && (
-                <button className="bg-primary hover:bg-primary-dull  px-4 py-1.5 mb-3 text-sm rounded-full fotn-medium cursor-pointer">
-                  Pay Now
+              {item.paymentStatus!=="paid" ? (
+                <button onClick={()=>handlePayment(item)} className="bg-primary hover:bg-primary-dull  px-4 py-1.5 mb-3 text-sm rounded-full font-medium cursor-pointer">
+                  {item.paymentStatus === "failed" ? "Retry Payment":"Pay Now"}
+                </button>
+              ):(
+                 <button className="bg-primary hover:bg-primary-dull  px-4 py-1.5 mb-3 text-sm rounded-full font-medium opacity-50 cursor-not-allowed">
+                 Paid!
                 </button>
               )}
             </div>
