@@ -3,6 +3,7 @@ import Usermodel from "../models/user.js";
 import Booking from "../models/Booking.js";
 import Show from "../models/Show.js";
 import sendEmail from "../config/nodeMailer.js";
+import { clerkClient } from "@clerk/express";
 
 export const inngest = new Inngest({ id: "movie-ticket-booking" });
 
@@ -144,10 +145,90 @@ const sendBookingConfirmationEmail = inngest.createFunction(
     });
   }
 );
+
+//Inngest function to send reminders
+const sendShowReminders = inngest.createFunction(
+  {
+    id: "send-show-reminders",
+    triggers: [{ cron: "0 */8 * * *" }], // ✅ array, not object
+  },
+  // ✅ handler is 2nd argument directly, no separate trigger arg
+  async ({ step }) => {
+    const now = new Date();
+    const in8Hours = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+    const windowStart = new Date(in8Hours.getTime() - 10 * 60 * 1000);
+
+    const reminderTasks = await step.run("prepare-reminder-tasks", async () => {
+      const shows = await Show.find({
+        showDateTime: { $gte: windowStart, $lte: in8Hours },
+      }).populate("movie");
+
+      const tasks = [];
+
+      for (const show of shows) {
+        if (!show.movie) continue;
+
+        const bookings = await Booking.find({
+          show: show._id,
+          paymentStatus: "paid",
+        });
+
+        if (bookings.length === 0) continue;
+
+        for (const booking of bookings) {
+          try {
+            const user = await clerkClient.users.getUser(booking.user);
+            const email = user.emailAddresses[0]?.emailAddress;
+            const name = `${user.firstName || ""} ${user.lastName || ""}`.trim();
+
+            if (email) {
+              tasks.push({
+                userEmail: email,
+                userName: name,
+                movieTitle: (show.movie as any).title,
+                showTime: show.showDateTime,
+                bookedSeats: booking.bookedSeats,
+              });
+            }
+          } catch (err) {
+            console.error(`Could not fetch user ${booking.user}:`, err);
+          }
+        }
+      }
+      return tasks;
+    });
+
+    if (reminderTasks.length === 0) {
+      return { sent: 0, message: "No reminders to send." };
+    }
+
+    let sent = 0;
+    for (const task of reminderTasks) {
+      await step.run(`send-reminder-${task.userEmail}-${task.showTime}`, async () => {
+        await sendEmail({
+          to: task.userEmail,
+          subject: `Reminder: ${task.movieTitle} starts in ~8 hours!`,
+          body: `
+            <h2>Hi ${task.userName},</h2>
+            <p>Your movie <strong>${task.movieTitle}</strong> starts at
+            <strong>${new Date(task.showTime).toLocaleString()}</strong>.</p>
+            <p>Your seats: <strong>${task.bookedSeats.join(", ")}</strong></p>
+            <p>Enjoy the show!</p>
+          `,
+        });
+        sent++;
+      });
+    }
+
+    return { sent, message: `${sent} reminder(s) sent.` };
+  }
+);
+
 export const functions: ReturnType<typeof inngest.createFunction>[] = [
   syncUserCreation,
   syncUserDeletion,
   syncUserUpdation,
   releaseSeatsAndDeleteBooking,
-  sendBookingConfirmationEmail
+  sendBookingConfirmationEmail,
+  sendShowReminders
 ];
