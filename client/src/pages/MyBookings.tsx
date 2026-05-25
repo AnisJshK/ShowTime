@@ -5,109 +5,133 @@ import BlurCircle from "../components/BlurCircle";
 import timeFormat from "../lib/timeFormat";
 import { dateFormat } from "../lib/dateFormat";
 import { useAppContext } from "../context/AppContext";
+import toast from "react-hot-toast";
 
-
-const loadRazorpayScript = ()=>{
-    return new Promise((resolve)=>{
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    })
-  }
+const loadRazorpayScript = (): Promise<boolean> => {
+  return new Promise((resolve) => {
+    if ((window as any).Razorpay) return resolve(true);
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
 const MyBookings = () => {
   const currency = import.meta.env.VITE_CURRENCY;
+  const razorpayKeyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
 
   const { axios, getToken, user, image_base_url } = useAppContext();
 
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const razorpayKeyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
+  const [payingBookingId, setPayingBookingId] = useState<string | null>(null);
 
-  
-
-  
-    const getMyBookings = useCallback(async () => {
-      try {
-        const { data } = await axios.get("/api/user/bookings", {
-          headers: {
-            Authorization: `Bearer ${await getToken()}`,
-          },
-        });
-        if (data.success) {
-          setBookings(data.bookings);
-        }
-      } catch (error: any) {
-        console.log(error)
+  const getMyBookings = useCallback(async () => {
+    try {
+      const { data } = await axios.get("/api/user/bookings", {
+        headers: {
+          Authorization: `Bearer ${await getToken()}`,
+        },
+      });
+      if (data.success) {
+        setBookings(data.bookings);
       }
-       setIsLoading(false)
-    },[axios,getToken]);
+    } catch (error: any) {
+      console.log(error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [axios, getToken]);
 
-    useEffect(()=>{
-     if(!user)return;
-     (async()=>{
-      await getMyBookings()
-     })();
-    },[user,getMyBookings])
+  useEffect(() => {
+    if (!user) return;
+    (async()=>{
+     await getMyBookings();
+    })();
+  }, [user, getMyBookings]);
 
-  const handlePayment = async (booking: any) => {
-    const res = await loadRazorpayScript();
-
-    if (!res) {
-      alert("Razorpay SDK failed to load. Are you online?");
+const handlePayment = async (booking: any) => {
+  setPayingBookingId(booking._id);
+  try {
+    const isScriptLoaded = await loadRazorpayScript();
+    if (!isScriptLoaded) {
+      toast.error("Razorpay SDK failed to load. Are you online?");
       return;
     }
 
-    // Options configuration for Razorpay modal
+    // ✅ Reuse existing /api/booking/create with the booking's own data
+    const { data } = await axios.post(
+      "/api/booking/create",
+      {
+        showId: booking.show._id,
+        selectedSeats: booking.bookedSeats,
+      },
+      { headers: { Authorization: `Bearer ${await getToken()}` } }
+    );
+
+    if (!data.success) return toast.error(data.message);
+    if (!data.order || !data.key)
+      return toast.error("Could not initialize payment. Please try again.");
+
     const options = {
-      key: razorpayKeyId,
-      amount: booking.amount * 100, // Razorpay takes amount in paise/cents
-      currency: currency || "INR",
+      key: data.key,
+      amount: data.order.amount,
+      currency: "INR",
       name: "Cinema Booking",
       description: `Tickets for ${booking.show.movie.title}`,
-      order_id: booking.razorpayOrderId, // Generated previously when creating the booking
-      handler: async function (response: any) {
+      order_id: data.order.id,
+      handler: async (response: any) => {
         try {
-          // Send payment verification data to your backend
-          const { data } = await axios.post(
-            "/api/user/verify-payment",
+          const { data: verifyData } = await axios.post(
+            "/api/booking/verify-payment",
             {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
-              bookingId: booking._id
+              bookingId: data.bookingId, // ✅ new bookingId from fresh create
             },
             { headers: { Authorization: `Bearer ${await getToken()}` } }
           );
 
-          if (data.success) {
-            alert("Payment successful!");
-            getMyBookings(); // Refresh UI list to show "Paid" status
+          if (verifyData.success) {
+            toast.success("Payment successful!");
+            (async () => { await getMyBookings(); })();
           } else {
-            alert("Payment verification failed.");
+            toast.error("Payment verification failed.");
           }
-        } catch (error: any) {
-          console.error(error);
-          alert("Something went wrong verifying the payment.");
+        } catch {
+          toast.error("Something went wrong verifying the payment.");
+        } finally {
+          setPayingBookingId(null);
         }
       },
       prefill: {
         name: user?.fullName || "",
         email: user?.primaryEmailAddress?.emailAddress || "",
       },
-      theme: {
-        color: "#3B82F6", // Customize to match your theme primary color
+      theme: { color: "#6366f1" },
+      modal: {
+        ondismiss: () => {
+          toast("Payment cancelled.", { icon: "ℹ️" });
+          setPayingBookingId(null);
+        },
       },
     };
 
     const paymentObject = new (window as any).Razorpay(options);
     paymentObject.open();
-  };
+  } catch (error: any) {
+    toast.error(error?.response?.data?.message || "Something went wrong");
+    setPayingBookingId(null);
+  }
+};
+  
 
   return !isLoading ? (
-    <div className="relative px-6 md:px-16 lg:px-40 pt-30 md:pt-40 min-h-[80vh">
+    <div className="relative px-6 md:px-16 lg:px-40 pt-30 md:pt-40 min-h-[80vh]">
       <BlurCircle top="100px" left="100px" />
       <div>
         <BlurCircle bottom="0px" top="200px" left="600px" />
@@ -120,7 +144,7 @@ const MyBookings = () => {
         >
           <div className="flex flex-col md:flex-row">
             <img
-              src={image_base_url+item.show.movie.poster_path}
+              src={image_base_url + item.show.movie.poster_path}
               alt=""
               className="md:max-w-45 aspect-video h-auto object-cover object-bottom rounded"
             />
@@ -140,13 +164,21 @@ const MyBookings = () => {
                 {currency}
                 {item.amount}
               </p>
-              {item.paymentStatus!=="paid" ? (
-                <button onClick={()=>handlePayment(item)} className="bg-primary hover:bg-primary-dull  px-4 py-1.5 mb-3 text-sm rounded-full font-medium cursor-pointer">
-                  {item.paymentStatus === "failed" ? "Retry Payment":"Pay Now"}
+              {item.paymentStatus !== "paid" ? (
+                <button
+                  onClick={() => handlePayment(item)}
+                  disabled={payingBookingId === item._id}
+                  className="bg-primary hover:bg-primary-dull px-4 py-1.5 mb-3 text-sm rounded-full font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-white"
+                >
+                  {payingBookingId === item._id
+                    ? "Processing..."
+                    : item.paymentStatus === "failed"
+                    ? "Retry Payment"
+                    : "Pay Now"}
                 </button>
-              ):(
-                 <button className="bg-primary hover:bg-primary-dull  px-4 py-1.5 mb-3 text-sm rounded-full font-medium opacity-50 cursor-not-allowed">
-                 Paid!
+              ) : (
+                <button className="bg-primary hover:bg-primary-dull px-4 py-1.5 mb-3 text-sm rounded-full font-medium opacity-50 cursor-not-allowed text-white">
+                  Paid!
                 </button>
               )}
             </div>
