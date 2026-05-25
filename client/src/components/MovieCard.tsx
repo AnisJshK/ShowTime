@@ -1,27 +1,15 @@
 import { StarIcon } from 'lucide-react'
-import React, { createContext, useState, useContext, useRef, useEffect } from 'react'
+import React, { createContext, useState, useContext, useRef, useEffect, type ElementType } from 'react'
 import { useNavigate } from 'react-router-dom'
 import timeFormat from '../lib/timeFormat'
 import { useAppContext } from '../context/AppContext'
-
+import type { Movie } from '../lib/types'
 // ── Helper ────────────────────────────────────────────────────
 const cx = (...classes: (string | undefined | false)[]): string =>
   classes.filter(Boolean).join(' ')
 
 // ── Types ─────────────────────────────────────────────────────
-interface Genre {
-  name: string
-}
 
-interface Movie {
-  _id: string
-  backdrop_path: string
-  title: string
-  release_date: string
-  genres: Genre[]
-  runtime: number
-  vote_average: number
-}
 
 // ── 3D Context ────────────────────────────────────────────────
 type MouseEnterContextType = [boolean, React.Dispatch<React.SetStateAction<boolean>>]
@@ -37,7 +25,7 @@ const useMouseEnter = (): MouseEnterContextType => {
 
 // ── CardItem ──────────────────────────────────────────────────
 interface CardItemProps extends React.HTMLAttributes<HTMLElement> {
-  as?: keyof JSX.IntrinsicElements
+  as?: ElementType
   children: React.ReactNode
   className?: string
   translateX?: number

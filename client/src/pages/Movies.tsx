@@ -5,6 +5,9 @@ import { useAppContext } from "../context/AppContext"
 
 const Movies = () => {
   const {shows} = useAppContext();
+  console.log("shows:", shows)
+console.log("first show:", shows[0])
+console.log("first show.movie:", shows[0]?.movie)
   return shows && shows.length > 0 ? (
     <div className="relative my-40 mb-60 px-6 md:px-15 lg:px-40 xl:px-44 overflow-hidden min-h-[80vh]">
 
@@ -13,9 +16,9 @@ const Movies = () => {
 
       <h1 className="text-lg font-medium my-4">Now Showing</h1>
       <div className="flex flex-wrap items-center justify-center gap-8 mt-8">
-        {shows.filter(([id,movieData])=>movieData).map(([id,movieData])=>(
-          <MovieCard movie={movieData} key={id}/>
-        ))}
+       {shows.filter((show) => show.movie).map((show) => (
+  <MovieCard movie={show.movie} key={show._id}/>
+))}
       </div>
     </div>
   ): (

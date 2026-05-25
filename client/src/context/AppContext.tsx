@@ -2,19 +2,7 @@ import axios from "axios";
 import { createContext, useContext } from "react";
 import { useAuth, useUser } from "@clerk/react";
 import { useNavigate } from "react-router-dom";
-
-interface Movie {
-  _id: string;
-  backdrop_path: string;
-  title: string;
-  [key: string]: any;
-}
-
-interface Show {
-  _id: string;
-  movie: Movie;
-  [key: string]: any;
-}
+import type { Movie,ActiveShow as Show } from "../lib/types";
 
 interface AppContextType {
   axios: typeof axios;

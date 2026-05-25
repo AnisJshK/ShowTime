@@ -117,26 +117,27 @@ export const addShow = async (req: Request, res: Response) => {
 };
 
 //API to get all shows from db
+// ✅ After — returns [{_id, movie, ...}, ...] objects
 export const getShows = async (req: Request, res: Response) => {
   try {
     const shows = await Show.find({ showDateTime: { $gte: new Date() } })
       .populate("movie")
       .sort({ showDateTime: 1 });
 
-    const uniqueShows = new Map(
+    // Deduplicate by movie id, keeping one show per movie
+    const uniqueShowsMap = new Map(
       shows.map((show) => [
         (show.movie as any)._id.toString(),
-        show.movie,
+        show, // ✅ store the full show object, not just the movie
       ])
     );
 
-    res.json({ success: true, shows: Array.from(uniqueShows) });
+    res.json({ success: true, shows: Array.from(uniqueShowsMap.values()) });
   } catch (error: any) {
     console.error(error);
     res.json({ success: false, message: error.message });
   }
 };
-
 //API to get a single show from db
 
 export const getShow = async (req: Request, res: Response) => {

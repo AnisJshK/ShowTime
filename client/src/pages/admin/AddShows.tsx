@@ -12,7 +12,7 @@ const AddShows = () => {
   const currency = import.meta.env.VITE_CURRENCY;
   const [nowPlayingMovies, setNowPlayingMovies] = useState<Movie[]>([]);
   const [selectedMovie, setSelectedMovie] = useState<any | null>(null);
-  const [dateTimeSelection, setDateTimeSelection] = useState({});
+  const [dateTimeSelection, setDateTimeSelection] = useState<Record<string,string[]>>({});
   const [dateTimeInput, setDateTimeInput] = useState("");
   const [showPrice, setShowPrice] = useState("");
 
@@ -31,7 +31,7 @@ const AddShows = () => {
         return prev;
     })
   }
-  const handleRemoveTime = (date,time)=>{
+  const handleRemoveTime = (date:string,time:string)=>{
     setDateTimeSelection((prev:any)=>{
         const filteredTimes = prev[date].filter((t:any)=>t !== time);
         if(filteredTimes.length===0){
@@ -185,7 +185,7 @@ const AddShows = () => {
                     <li key={date}>
                         <div className="font-medium">{date}</div>
                         <div>
-                            {times.map((time:any)=>(
+                            {times.map((time)=>(
                                 <div key={time} className="border border-primary px-2 py-1 flex items-center rounded-xl w-20">
                                     <span>{time}</span>
                                     <DeleteIcon onClick={()=>handleRemoveTime(date,time)} width={15} className="ml-2 text-red-500 hover:text-red-700 cursor-pointer"/>

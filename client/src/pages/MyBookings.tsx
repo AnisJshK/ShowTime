@@ -20,7 +20,6 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
 const MyBookings = () => {
   const currency = import.meta.env.VITE_CURRENCY;
-  const razorpayKeyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
 
   const { axios, getToken, user, image_base_url } = useAppContext();
 

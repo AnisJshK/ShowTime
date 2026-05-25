@@ -20,23 +20,20 @@ const FeaturedSection = () => {
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-8 mt-8">
-        {/* 1. Added a fallback to prevent mapping over an empty/null state during initial fetch */}
-        {shows && shows.length > 0 ? (
-          shows
-            .filter(([id,movieData]) => movieData)
-            .slice(0, 4)
-            .map(([id,movieData]) => (
-              /* 2. Upgraded the key fallback chain so React never receives an undefined tracking key */
-              <MovieCard 
-               key={id}
-               movie={movieData}
-              />
-            ))
-        ) : (
-          /* 3. Safe loading state UI instead of trying to map over empty space */
-          <p className="text-gray-400 text-sm animate-pulse py-10">Loading featured movies...</p>
-        )}
-      </div>
+  {shows && shows.length > 0 ? (
+    shows
+      .filter((show) => show.movie)   // ✅ show is an object
+      .slice(0, 4)
+      .map((show) => (
+        <MovieCard
+          key={show._id}              // ✅ use show._id
+          movie={show.movie}          // ✅ use show.movie
+        />
+      ))
+  ) : (
+    <p className="text-gray-400 text-sm animate-pulse py-10">Loading featured movies...</p>
+  )}
+</div>
 
       <div className="flex justify-center mt-20">
         {/* Fixed a minor typo here in your original class: changed 'tranistion' to 'transition' */}

@@ -38,7 +38,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
       console.log("Fetching shows from:", axios.defaults.baseURL + "/api/show/all");
       const { data } = await axios.get("/api/show/all");
-      
+      console.log("RAW API data.shows[0]:", JSON.stringify(data.shows[0])); 
       console.log("Backend API Response raw data:", data);
 
       if (data.success) {
@@ -117,6 +117,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     fetchFavoriteMovies,
     image_base_url,
   };
-
+  
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };

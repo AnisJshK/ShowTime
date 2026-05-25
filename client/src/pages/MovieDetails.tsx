@@ -142,18 +142,14 @@ const MovieDetails = () => {
 
       <p className="text-lg font-medium mt-20 mb-8">You May also Like</p>
 
-      <div className="flex flex-wrap max-sm:justify-center gap-8 ">
-        {shows
-          ?.filter(([id, movieData]) => movieData)
-          .slice(0, 4)
-          .map(
-            (
-              [id, movieData], // 🔥 Destructure the array item right here!
-            ) => (
-              <MovieCard key={id} movie={movieData} />
-            ),
-          )}
-      </div>
+      <div className="flex flex-wrap max-sm:justify-center gap-8">
+  {shows
+    ?.filter((show) => show.movie)
+    .slice(0, 4)
+    .map((show) => (
+      <MovieCard key={show._id} movie={show.movie} />
+    ))}
+</div>
 
       <div className="flex justify-center mt-8">
         <button

@@ -39,7 +39,7 @@ const SeatLayout = () => {
     if ((window as any).Razorpay) return resolve(true);
     
     // 2. Look through the document to see if a script tag is already tracking it
-    const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+    const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]') as HTMLScriptElement | null;
     if (existingScript) {
       existingScript.onload = () => resolve(true);
       existingScript.onerror = () => resolve(false);
