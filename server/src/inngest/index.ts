@@ -18,9 +18,6 @@ type ClerkDeleteData = {
   id: string;
 };
 
-//Inngest function to save user data to a db
-// ✅ v4 syntax — trigger is the 2nd argument
-
 const syncUserCreation = inngest.createFunction(
   {
     id: "sync-user-from-clerk",
@@ -258,7 +255,7 @@ const sendNewShowNotifications = inngest.createFunction(
         body,
       });
     }
-    return {message:"Notifictions sent."}
+    return { message: "Notifictions sent." };
   },
 );
 
@@ -269,5 +266,5 @@ export const functions: ReturnType<typeof inngest.createFunction>[] = [
   releaseSeatsAndDeleteBooking,
   sendBookingConfirmationEmail,
   sendShowReminders,
-  sendNewShowNotifications
+  sendNewShowNotifications,
 ];
