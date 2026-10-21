@@ -1,0 +1,27 @@
+FROM node:22-alpine as build
+
+WORKDIR /app
+
+COPY ./package*.json ./
+
+RUN npm install
+
+COPY . .
+
+ARG VITE_CURRENCY
+ARG VITE_CLERK_PUBLISHABLE_KEY
+ARG VITE_BASE_URL
+ARG VITE_TMDB_IMAGE_BASE_URL
+
+ENV VITE_CURRENCY=$VITE_CURRENCY
+ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
+ENV VITE_BASE_URL=$VITE_BASE_URL
+ENV VITE_TMDB_IMAGE_BASE_URL=$VITE_TMDB_IMAGE_BASE_URL
+
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+CMD [ "nginx","-g","daemon off;" ]
