@@ -1,4 +1,4 @@
-name: Build and Push Docker  Images
+name: Build and Push Docker Images
 
 on:
   push:
@@ -34,8 +34,8 @@ jobs:
                             VITE_TMDB_IMAGE_BASE_URL=${{secrets.VITE_TMDB_IMAGE_BASE_URL}}
                       
                 tags: |
-                    ${{secrets.DOCKERHUB_USERNAME}}/showtime-client:${{github.sha}}
-                    ${{secrets.DOCKERHUB_USERNAME}}/showtime-client:main
+                    ${{vars.DOCKERHUB_USERNAME}}/showtime-client:${{github.sha}}
+                    ${{vars.DOCKERHUB_USERNAME}}/showtime-client:main
             
           - name: Build and push Server
             uses: docker/build-push-action@v6
@@ -43,5 +43,5 @@ jobs:
                 context: ./server
                 push: true
                 tags: |
-                      ${{secrets.DOCKERHUB_USERNAME}}/showtime-server:${{github.sha}}
-                      ${{secrets.DOCKERHUB_USERNAME}}/showtime-server:main
+                      ${{vars.DOCKERHUB_USERNAME}}/showtime-server:${{github.sha}}
+                      ${{vars.DOCKERHUB_USERNAME}}/showtime-server:main
