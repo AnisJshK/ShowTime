@@ -8,7 +8,6 @@ import crypto from "crypto";
 import { inngest } from "../inngest/index.js";
 
 
-// ✅ Fail fast — catches missing env vars before any request is made
 if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
   throw new Error("RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set in .env");
 }
@@ -19,17 +18,12 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET!,
 });
 
-/**
- * Checks if all selectedSeats are free for a given show.
- * Blocks seats that are either "paid" OR "pending" so two users
- * can't simultaneously claim the same seat.
- */
+
 const checkSeatsAvailability = async (
   showId: string | mongoose.Types.ObjectId,
   selectedSeats: string[]
 ): Promise<boolean> => {
   try {
-    // 1. Strictly validate the ID string before casting to avoid thread hangs
     const cleanId = showId.toString();
     if (!mongoose.Types.ObjectId.isValid(cleanId)) {
       console.error(`checkSeatsAvailability: Invalid ObjectId string received: "${cleanId}"`);
@@ -39,8 +33,7 @@ const checkSeatsAvailability = async (
     const bookings = await Booking.find({
       show: new mongoose.Types.ObjectId(cleanId),
       paymentStatus: { $in: ["paid", "pending"] },
-    }).lean(); // .lean() optimizes performance and keeps things lightweight
-
+    }).lean(); 
     const occupiedSeats = bookings.flatMap((b) => b.bookedSeats);
     return !selectedSeats.some((seat) => occupiedSeats.includes(seat));
   } catch (error: any) {
@@ -59,7 +52,6 @@ export const createBooking = async (req: Request, res: Response) => {
     if (!showId || !selectedSeats?.length)
       return res.status(400).json({ success: false, message: "showId and selectedSeats are required" });
 
-    // ✅ Validate ObjectId before any DB call — invalid id throws and hangs without this
     if (!mongoose.Types.ObjectId.isValid(showId))
       return res.status(400).json({ success: false, message: "Invalid showId" });
 
@@ -104,8 +96,7 @@ export const createBooking = async (req: Request, res: Response) => {
     booking.razorpayOrderId = razorpayOrder.id;
     await booking.save();
 
-    // ✅ Uncomment inngest after fixing the hang
-   await inngest.send({
+    await inngest.send({
   name: "app/checkpayment",
   data: { bookingId: booking._id.toString() },
 }).catch(err => console.error("Inngest event dispatch failed:", err));
@@ -173,10 +164,7 @@ export const verifyPayment = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * Returns seats that are either paid OR pending so the frontend
- * can gray them out accurately in real time.
- */
+
 export const getOccupiedSeats = async (req: Request, res: Response) => {
   try {
     const { showId } = req.params;

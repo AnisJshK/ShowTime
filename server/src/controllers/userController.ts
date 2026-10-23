@@ -4,7 +4,6 @@ import Booking from "../models/Booking.js";
 import Movie from "../models/Movie.js";
 
 
-//API controller function to get user bookings
 export const getUserBookings = async(req:Request,res:Response)=>{
     try {
         const user = getAuth(req).userId;
@@ -20,34 +19,6 @@ export const getUserBookings = async(req:Request,res:Response)=>{
 }
 
 
-// export const updateFavorite = async(req:Request,res:Response)=>{
-//     try {
-//         const {movieId} = req.body;
-//         const userId = getAuth(req).userId;
-//         if(!userId){
-//             return res.status(402).json({message:"userId not found"})
-//         }
-//         const user = await clerkClient.users.getUser(userId)
-//         ;
-//        if(!user.privateMetadata.favorites){
-//         user.privateMetadata.favorites = []
-//        }
-       
-//        if(!user.privateMetadata.favorites.includes(movieId)){
-//         user.privateMetadata.favorites.push(movieId)
-//        }else{
-//         user.privateMetadata.favorites = user.privateMetadata.favorites.filter(item => item!=movieId)
-//        }
-//        await clerkClient.users.updateUserMetadata(userId,{
-//         privateMetadata:user.privateMetadata
-//        })
-//         res.json({success:true,message:"Favorite added successfully!"})
-//     } catch (error:any) {
-//         console.error(error.message);
-//         res.json({success:false,message:error.message})
-//     }
-// }
-//API controller function to update favorite Movie in clerk user metadata
 
 export const updateFavorite = async(req:Request,res:Response)=>{
     try {

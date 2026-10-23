@@ -15,7 +15,6 @@ interface ShowInputItem {
   occupiedSeats: Record<string, any>;
 }
 
-//API to get now playing movies from tmdb api
 export const getNowPlayingMovies = async (req: Request, res: Response) => {
   try {
     const { data } = await axios.get(
@@ -37,7 +36,6 @@ export const getNowPlayingMovies = async (req: Request, res: Response) => {
   }
 };
 
-//Api to add a a new show to the db
 
 export const addShow = async (req: Request, res: Response) => {
   try {
@@ -76,7 +74,6 @@ export const addShow = async (req: Request, res: Response) => {
         vote_average: movieApiData.vote_average,
         runtime: movieApiData.runtime,
       };
-      //Add movie to the database
       movie = await Movie.create(movieDetails);
     }
 
@@ -98,7 +95,6 @@ export const addShow = async (req: Request, res: Response) => {
       await Show.insertMany(showsToCreate);
     }
 
-    //Trigger inngest event
     await inngest.send({
       name:"app/show.added",
       data:{
@@ -116,19 +112,16 @@ export const addShow = async (req: Request, res: Response) => {
   }
 };
 
-//API to get all shows from db
-// ✅ After — returns [{_id, movie, ...}, ...] objects
 export const getShows = async (req: Request, res: Response) => {
   try {
     const shows = await Show.find({ showDateTime: { $gte: new Date() } })
       .populate("movie")
       .sort({ showDateTime: 1 });
 
-    // Deduplicate by movie id, keeping one show per movie
     const uniqueShowsMap = new Map(
       shows.map((show) => [
         (show.movie as any)._id.toString(),
-        show, // ✅ store the full show object, not just the movie
+        show,
       ])
     );
 
@@ -138,12 +131,10 @@ export const getShows = async (req: Request, res: Response) => {
     res.json({ success: false, message: error.message });
   }
 };
-//API to get a single show from db
 
 export const getShow = async (req: Request, res: Response) => {
   try {
     const { movieId } = req.params;
-    //get all upcoming shows for the movie
     const shows = await Show.find({
       movie: movieId,
       showDateTime: { $gte: new Date() },

@@ -4,13 +4,11 @@ import Show from "../models/Show.js"
 import Usermodel from "../models/user.js"
 
 
-//API to check if user is admin
 export const isAdmin = async(req:Request,res:Response)=>{
 
     res.json({success:true,isAdmin:true})
 }
 
-//API to get dashboard data
 export const getDashboardData = async(req:Request,res:Response)=>{
     try {
         const bookings = await Booking.find({isPaid:true})
@@ -31,7 +29,6 @@ export const getDashboardData = async(req:Request,res:Response)=>{
 }
 
 
-//API to get all shows
 export const getAllShows = async(req:Request,res:Response)=>{
     try {
         const shows = await Show.find({showDateTime:{$gte:new Date()}}).populate('movie').sort({showDateTime:1});
@@ -43,7 +40,6 @@ export const getAllShows = async(req:Request,res:Response)=>{
 }
 
 
-//API to get all bookings
 export const getAllBookings = async(req:Request,res:Response)=>{
     try {
         const bookings = await Booking.find({}).populate('user').populate({
